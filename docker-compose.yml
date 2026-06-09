@@ -1,0 +1,58 @@
+version: "3.9"
+
+# ============================================================
+# Docker Compose orchestrates multiple containers as one system
+# Each service = one container
+# ============================================================
+
+services:
+
+  # ---- PostgreSQL Database ----
+  db:
+    image: postgres:15-alpine        # Slim Alpine image
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}          # Loaded from .env file
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data  # Named volume = data survives container restarts
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ---- FastAPI Backend ----
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      # "db" in the URL is the service name above — Docker's internal DNS resolves it
+    depends_on:
+      db:
+        condition: service_healthy  # Wait for DB to be ready before starting backend
+    volumes:
+      - ./backend:/app  # Dev hot-reload: changes reflect without rebuilding
+
+  # ---- React Frontend ----
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        REACT_APP_API_URL: http://localhost:8000   # Build-time env var for React
+    restart: always
+    ports:
+      - "3000:80"     # 3000 on host → 80 inside container (Nginx)
+    depends_on:
+      - backend
+
+# Named volume — managed by Docker, persists across container restarts/removals
+volumes:
+  postgres_data:
