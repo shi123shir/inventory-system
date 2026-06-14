@@ -6,7 +6,7 @@ from sqlalchemy.orm import sessionmaker
 # Reads DATABASE_URL from environment variable (set in docker-compose.yml)
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    "postgresql://postgres:password@localhost:5432/inventory_db"
+    "postgresql://inventory_user:om7MsfcL3b217cglryDFYE4NpIDR9KFI@dpg-d8k0ga8jo6nc73a1fei0-a.oregon-postgres.render.com/inventorydb_56ko"
 )
 
 # Engine: the core interface to the database
